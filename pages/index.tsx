@@ -1,118 +1,192 @@
 import Image from 'next/image'
 import { Inter } from 'next/font/google'
-
 const inter = Inter({ subsets: ['latin'] })
+import Head from 'next/head'
+import { motion, useScroll, useTransform, useTime } from 'framer-motion'
+import 'tailwindcss/tailwind.css'
+import Header from './components/Header'
+import { useInView } from 'react-intersection-observer'
+import { Canvas, useThree, useFrame } from '@react-three/fiber'
+import { useRef, useLayoutEffect } from 'react'
+import { degreesToRadians, progress, mix } from 'popmotion'
+import Footer from './components/Footer'
+
+const companyName = 'Red Fox'
+const footerLinks = [
+  { title: 'Home', href: '/' },
+  { title: 'About', href: '/about' },
+  { title: 'Contact', href: '/contact' },
+]
+
+const color = '#fff'
+
+const Icosahedron = () => (
+  <mesh rotation-x={0.35}>
+    <icosahedronGeometry args={[1, 0]} />
+    <meshBasicMaterial wireframe color={color} />
+  </mesh>
+)
+
+const Star = ({ p }: { p: number }) => {
+  //@ts-ignore
+  const ref = useRef<THREE.Object3D>(null)
+
+  useLayoutEffect(() => {
+    const distance = mix(2, 3.5, Math.random())
+    const yAngle = mix(
+      degreesToRadians(80),
+      degreesToRadians(100),
+      Math.random(),
+    )
+    const xAngle = degreesToRadians(360) * p
+    ref.current!.position.setFromSphericalCoords(distance, yAngle, xAngle)
+  })
+
+  return (
+    <mesh ref={ref}>
+      <boxGeometry args={[0.05, 0.05, 0.05]} />
+      <meshBasicMaterial wireframe color={color} />
+    </mesh>
+  )
+}
+
+function Scene({ numStars = 100 }) {
+  const gl = useThree((state) => state.gl)
+  const { scrollYProgress } = useScroll()
+  const yAngle = useTransform(
+    scrollYProgress,
+    [0, 1],
+    [0.001, degreesToRadians(180)],
+  )
+  const distance = useTransform(scrollYProgress, [0, 1], [10, 3])
+  const time = useTime()
+
+  useFrame(({ camera }) => {
+    camera.position.setFromSphericalCoords(
+      distance.get(),
+      yAngle.get(),
+      time.get() * 0.0005,
+    )
+    camera.updateProjectionMatrix()
+    camera.lookAt(0, 0, 0)
+  })
+
+  useLayoutEffect(() => gl.setPixelRatio(0.3))
+
+  const stars = []
+  for (let i = 0; i < numStars; i++) {
+    stars.push(<Star p={progress(0, numStars, i)} />)
+  }
+
+  return (
+    <>
+      <Icosahedron />
+      {stars}
+    </>
+  )
+}
 
 export default function Home() {
+  const { ref, inView } = useInView({ threshold: 0.5, triggerOnce: true })
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.4,
+        delayChildren: 0.8,
+      },
+    },
+  }
+
+  const item = {
+    hidden: { y: 20, opacity: 0 },
+    show: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 100,
+        damping: 20,
+      },
+    },
+  }
+
   return (
-    <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-    >
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-[#0e0e0e]">
+      <Head>
+        <title>Red Fox Team</title>
+      </Head>
+      <Header />
+
+      <main className="flex flex-col min-h-screen justify-center items-center text-center p-10 bg-[#0e0e0e]">
+        <motion.section
+          className="flex-1 flex flex-col justify-center items-center min-h-screen"
+          variants={container}
+          initial="hidden"
+          animate="show"
+          ref={ref}
+        >
+          <motion.h2 className="text-5xl font-semibold text-white mb-6">
+            Who We Are
+          </motion.h2>
+          <motion.p variants={item} className="text-xl text-white">
+            Red Fox Team is a company specialized in AI, GPT, and LLM
+            technologies. We are dedicated to creating innovative solutions and
+            pushing the boundaries of whats possible in the world of AI.
+          </motion.p>
+        </motion.section>
+
+        <motion.section
+          className="flex-1 flex flex-col justify-center items-center min-h-screen"
+          variants={container}
+          initial="hidden"
+          animate={inView ? 'show' : 'hidden'}
+          ref={ref}
+        >
+          <motion.h2
+            className="text-5xl font-semibold text-white mb-6"
+            variants={item}
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+            Our Differentials
+          </motion.h2>
+          <motion.p variants={item} className="text-xl text-white">
+            At Red Fox, we stand out from the rest of the companies because of
+            our unique approach to AI. We focus not only on the technology but
+            also on its impact on peoples lives. Our team is made up of experts
+            in AI, as well as in the fields of psychology, ethics, and design.
+            This interdisciplinary approach allows us to create AI solutions
+            that are not only efficient but also ethical, empathetic, and
+            user-friendly. We believe that AI should serve people, not the other
+            way around, and we work tirelessly to make that a reality.
+          </motion.p>
+        </motion.section>
+
+        <motion.section
+          className="flex-1 flex flex-col justify-center items-center min-h-screen"
+          initial="hidden"
+          animate="show"
+        >
+          <motion.h2 className="text-5xl font-semibold text-white mb-6">
+            Our Approach
+          </motion.h2>
+          <motion.p className="text-xl text-white">
+            At Red Fox, we take a human-centered approach to AI. We believe that
+            AI should serve people, not the other way around. Thats why we work
+            closely with experts in psychology, ethics, and design to create AI
+            solutions that are not only efficient but also ethical, empathetic,
+            and user-friendly.
+          </motion.p>
+        </motion.section>
+
+        <div className="min-h-screen  fixed top-0 right-0 bottom-0 left-0 opacity-50">
+          <Canvas gl={{ antialias: false }} className="min-h-screen">
+            <Scene />
+          </Canvas>
         </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+      </main>
+      <Footer companyName={companyName} links={footerLinks} />
+    </div>
   )
 }
